@@ -14,6 +14,11 @@ node Appointment {
     has visit_type: str = "Online";
     has token_number: int = 0;
     has status: str = "Booked";
+    has scheduled_start: str = "09:00";
+    has predicted_arrival: str = "09:00";
+    has allergies: str = "Not recorded";
+    has history: str = "Not recorded";
+    has symptoms: str = "Routine consultation";
 }
 
 node ChatMessage {
@@ -24,6 +29,20 @@ node ChatMessage {
     has kind: str = "message";
 }
 
+node LabTest {
+    has patient_name: str = "";
+    has district: str = "";
+    has test_name: str = "";
+    has center: str = "";
+    has scheduled_at: str = "";
+    has status: str = "Scheduled";
+    has key_metric_name: str = "";
+    has measured_value: str = "";
+    has normal_range: str = "";
+    has health_flag: str = "";
+    has clinical_comment: str = "";
+}
+
 
 def:pub get_queue() -> list[dict] {
     hospitals = [root -->][?:Hospital];
@@ -31,8 +50,11 @@ def:pub get_queue() -> list[dict] {
         root ++> Hospital(name="SuwaSmart Medical Centre", district="Colombo", specialty="General practice", status="On time", current_token=4);
         root ++> Hospital(name="Ratnapura Specialist Clinic", district="Ratnapura", specialty="Cardiology", status="Delayed", delay_minutes=15, current_token=2);
         root ++> Hospital(name="Kandy Diagnostics", district="Kandy", specialty="Diagnostics", status="On time", current_token=1);
-        root ++> Appointment(patient_name="Nimali Perera", doctor_name="Dr. Senanayake", district="Colombo", visit_type="Online GP", token_number=4);
-        root ++> Appointment(patient_name="Kasun Silva", doctor_name="Dr. Fernando", district="Ratnapura", visit_type="Physical", token_number=5);
+        root ++> Appointment(patient_name="Nimali Perera", doctor_name="Dr. Senanayake", district="Colombo", visit_type="Physical specialist", token_number=4, status="Booked", allergies="Penicillin", history="Hypertension", symptoms="Follow-up review");
+        root ++> Appointment(patient_name="Kasun Silva", doctor_name="Dr. Fernando", district="Ratnapura", visit_type="Physical", token_number=5, status="Booked", scheduled_start="10:00", predicted_arrival="10:30", allergies="None known", history="Asthma", symptoms="Back discomfort");
+        root ++> Appointment(patient_name="Amaya Perera", doctor_name="Dr. Fernando", district="Ratnapura", visit_type="Physical", token_number=6, status="Booked", scheduled_start="10:00", predicted_arrival="10:40", symptoms="Joint pain");
+        root ++> LabTest(patient_name="Nimali Perera", district="Colombo", test_name="Full Blood Count", center="SuwaSmart Medical Centre Lab", scheduled_at="Today · 10:30", status="Sample Collected / Scanned");
+        root ++> LabTest(patient_name="Kasun Silva", district="Ratnapura", test_name="Dengue NS1", center="Ratnapura Specialist Clinic", scheduled_at="Today · 11:00", status="Scheduled");
         hospitals = [root -->][?:Hospital];
     }
     rows: list[dict] = [];
@@ -48,11 +70,8 @@ def:pub get_suggested_hospitals(district: str) -> list[dict] {
     local: list[dict] = [];
     other: list[dict] = [];
     for h in all_hospitals {
-        if (h["district"] as str).lower() == district.strip().lower() {
-            local.append(h);
-        } else {
-            other.append(h);
-        }
+        if (h["district"] as str).lower() == district.strip().lower() { local.append(h); }
+        else { other.append(h); }
     }
     if len(local) > 0 { return local + other; }
     return other;
@@ -66,17 +85,13 @@ def:pub get_chat_messages() -> list[dict] {
         messages = [root -->][?:ChatMessage];
     }
     rows: list[dict] = [];
-    for m in messages {
-        rows.append({"sender": m.sender, "text": m.text, "district": m.district, "created_at": m.created_at, "kind": m.kind});
-    }
+    for m in messages { rows.append({"sender": m.sender, "text": m.text, "district": m.district, "created_at": m.created_at, "kind": m.kind}); }
     return rows;
 }
 
 
 def:pub triage_symptoms(symptoms: str, district: str) -> dict {
-    if not symptoms.strip() {
-        return {"ok": False, "message": "Please describe your symptoms first."};
-    }
+    if not symptoms.strip() { return {"ok": False, "message": "Please describe your symptoms first."}; }
     clean_symptoms = symptoms.strip();
     lower_symptoms = clean_symptoms.lower();
     guidance = "A prompt online GP consultation is a reasonable next step. Share when the symptoms began and any medicines or allergies with the clinician.";
@@ -90,17 +105,80 @@ def:pub triage_symptoms(symptoms: str, district: str) -> dict {
         care_match = "Online GP, then orthopaedics if advised";
     } elif "fever" in lower_symptoms or "dengue" in lower_symptoms {
         guidance = "Please contact a clinician promptly, especially for persistent or high fever. A clinician may consider a Full Blood Count or Dengue NS1 based on your history.";
-        care_match = "Online GP";
         test = "Possible clinician-directed test: Full Blood Count or Dengue NS1.";
     } elif "headache" in lower_symptoms or "dizz" in lower_symptoms {
         guidance = "A clinician should review new, persistent, or worsening symptoms. An online GP can assess you and advise whether a specialist review is needed.";
-        care_match = "Online GP";
     } else {
         guidance = "A clinician should assess your symptoms and history before recommending treatment. An online GP is a practical first step.";
     }
     root ++> ChatMessage(sender="You", text=clean_symptoms, district=district, created_at="Now", kind="patient");
     root ++> ChatMessage(sender="SuwaSmart assistant", text=f"Triage guide: {guidance} Suggested care: {care_match}. {test} Location noted: {district}. This is general guidance, not a diagnosis.", district=district, created_at="Now", kind="assistant");
-    return {"ok": True, "message": f"Triage guide: {guidance} Suggested care: {care_match}. {test} Location noted: {district}. This is general guidance, not a diagnosis.", "care_match": care_match, "suggested_test": test};
+    return {"ok": True, "message": guidance, "care_match": care_match, "suggested_test": test};
+}
+
+
+def:pub get_staff_appointments() -> list[dict] {
+    appts = [root -->][?:Appointment];
+    if len(appts) == 0 { get_queue(); appts = [root -->][?:Appointment]; }
+    rows: list[dict] = [];
+    for a in appts {
+        if "physical" in a.visit_type.lower() and a.doctor_name == "Dr. Fernando" {
+            rows.append({"patient_name": a.patient_name, "doctor_name": a.doctor_name, "district": a.district, "visit_type": a.visit_type, "token": a.token_number, "status": a.status, "scheduled_start": a.scheduled_start, "predicted_arrival": a.predicted_arrival, "allergies": a.allergies, "history": a.history, "symptoms": a.symptoms});
+        }
+    }
+    return rows;
+}
+
+
+def:pub update_doctor_queue(delay_minutes: int, current_token: int, status: str) -> dict {
+    if delay_minutes < 0 or delay_minutes > 180 { return {"ok": False, "message": "Delay must be between 0 and 180 minutes."}; }
+    if current_token < 1 { return {"ok": False, "message": "Current token must be at least 1."}; }
+    if status != "On Time" and status != "Delayed" and status != "Cancelled" { return {"ok": False, "message": "Choose On Time, Delayed, or Cancelled."}; }
+    hospitals = [root -->][?:Hospital];
+    for h in hospitals { if h.district == "Ratnapura" { h.delay_minutes = delay_minutes; h.current_token = current_token; h.status = status; } }
+    for a in [root -->][?:Appointment] {
+        if "physical" in a.visit_type.lower() and a.district == "Ratnapura" {
+            if status == "Cancelled" { a.status = "Reschedule required"; a.predicted_arrival = "Reschedule required"; }
+            else {
+                a.status = status;
+                if a.token_number <= current_token { a.predicted_arrival = a.scheduled_start; }
+                elif delay_minutes >= 60 { a.predicted_arrival = "12:00 or later"; }
+                elif delay_minutes >= 45 { a.predicted_arrival = "11:45 or later"; }
+                elif delay_minutes >= 30 { a.predicted_arrival = "11:30 or later"; }
+                elif delay_minutes >= 15 { a.predicted_arrival = "11:15 or later"; }
+                else { a.predicted_arrival = "10:00 or later"; }
+            }
+        }
+    }
+    return {"ok": True, "message": f"Queue updated: {status}, delay {delay_minutes} minutes, current token #{current_token}. Physical bookings were updated."};
+}
+
+
+def:pub get_lab_tests() -> list[dict] {
+    tests = [root -->][?:LabTest];
+    if len(tests) == 0 { get_queue(); tests = [root -->][?:LabTest]; }
+    rows: list[dict] = [];
+    for t in tests { rows.append({"patient_name": t.patient_name, "district": t.district, "test_name": t.test_name, "center": t.center, "scheduled_at": t.scheduled_at, "status": t.status, "key_metric_name": t.key_metric_name, "measured_value": t.measured_value, "normal_range": t.normal_range, "health_flag": t.health_flag, "clinical_comment": t.clinical_comment}); }
+    return rows;
+}
+
+
+def:pub update_lab_test(test_name: str, status: str, key_metric_name: str, measured_value: str, normal_range: str, health_flag: str, clinical_comment: str) -> dict {
+    if status != "Scheduled" and status != "Sample Collected / Scanned" and status != "Report Ready" { return {"ok": False, "message": "Choose a valid lab workflow status."}; }
+    if status == "Report Ready" and (not key_metric_name.strip() or not measured_value.strip() or not normal_range.strip() or not clinical_comment.strip()) { return {"ok": False, "message": "Enter the metric, value, normal range, and clinical comment before releasing a report."}; }
+    if health_flag != "" and health_flag != "Normal" and health_flag != "Borderline" and health_flag != "Attention Required" { return {"ok": False, "message": "Choose a valid health flag."}; }
+    tests = [root -->][?:LabTest];
+    for t in tests {
+        if t.test_name == test_name {
+            t.status = status;
+            if status == "Report Ready" {
+                t.key_metric_name = key_metric_name.strip(); t.measured_value = measured_value.strip(); t.normal_range = normal_range.strip(); t.health_flag = health_flag; t.clinical_comment = clinical_comment.strip();
+                root ++> ChatMessage(sender="SuwaSmart Lab", text=f"Your {t.test_name} report is ready. Result: {t.key_metric_name} {t.measured_value}; normal range {t.normal_range}. Status: {t.health_flag}. Please review this with your clinician.", district=t.district, created_at="Now", kind="notification");
+            }
+            return {"ok": True, "message": f"{t.test_name} updated to {status}."};
+        }
+    }
+    return {"ok": False, "message": "Lab booking not found."};
 }
 
 
