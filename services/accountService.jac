@@ -21,7 +21,6 @@ node HealthHistoryEntry {
 
 node StaffApplication {
     has full_name: str = "";
-    has username: str = "";
     has professional_number: str = "";
     has role: str = "";
     has status: str = "Pending admin approval";
@@ -84,13 +83,13 @@ def:priv get_health_history() -> list[dict] {
 }
 
 
-def:pub submit_staff_application(full_name: str, username: str, professional_number: str, role: str) -> dict {
-    if not full_name.strip() or not username.strip() or not professional_number.strip() { return {"ok": False, "message": "Name, username, and professional registration number are required."}; }
+def:pub submit_staff_application(full_name: str, professional_number: str, role: str) -> dict {
+    if not full_name.strip() or not professional_number.strip() { return {"ok": False, "message": "Name and professional registration number are required."}; }
     staff_role = role.strip().lower().replace(" ", "_");
     if staff_role != "doctor" and staff_role != "lab_staff" { return {"ok": False, "message": f"Select Doctor or Lab Staff (received: {role})."}; }
     for existing in [root.shared -->][?:StaffApplication] {
-        if existing.professional_number == professional_number.strip() { return {"ok": False, "message": "That registration number already has an application."}; }
+        if existing.professional_number == professional_number.strip() and existing.role == staff_role { return {"ok": False, "message": "That registration number already has an application for this staff role."}; }
     }
-    root.shared ++> StaffApplication(full_name=full_name.strip(), username=username.strip(), professional_number=professional_number.strip(), role=staff_role);
+    root.shared ++> StaffApplication(full_name=full_name.strip(), professional_number=professional_number.strip(), role=staff_role);
     return {"ok": True, "message": "Application submitted. Admin approval is required before staff access is granted."};
 }

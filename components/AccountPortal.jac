@@ -78,7 +78,7 @@ def:pub AccountPortal() -> JsxElement {
         error = "";
         message = "";
         try {
-            result = await submit_staff_application(full_name, username, professional_number, role);
+            result = await submit_staff_application(full_name, professional_number, role);
             if result["ok"] as bool { message = result["message"] as str; }
             else { error = result["message"] as str; }
         } except Exception { error = "Staff application could not be submitted."; }
@@ -98,7 +98,6 @@ def:pub AccountPortal() -> JsxElement {
                     {mode == "Staff application" and <>
                         <label className="flex flex-col gap-1.5 text-sm font-medium">Staff role<select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={role} onChange={change_staff_role}><option>doctor</option><option>lab_staff</option></select></label>
                         <label className="flex flex-col gap-1.5 text-sm font-medium">Full name<Input value={full_name} onChange={change_full_name} placeholder="Name as registered" /></label>
-                        <label className="flex flex-col gap-1.5 text-sm font-medium">Username<Input value={username} onChange={change_username} placeholder="Choose a username" /></label>
                         <label className="flex flex-col gap-1.5 text-sm font-medium">Professional registration number<Input value={professional_number} onChange={change_registration} placeholder="Required for staff review" /></label>
                         <Button onClick={submit_staff}>Submit staff application</Button>
                     </>}
