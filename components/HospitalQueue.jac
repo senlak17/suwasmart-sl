@@ -3,7 +3,7 @@ import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent
 import from .ui.button { Button }
 import from .ui.input { Input }
 import from .ui.badge { Badge }
-import from "@jac/runtime" { Link }
+import from "@jac/runtime" { Link, jacIsLoggedIn, Navigate }
 
 
 def:pub HospitalQueue() -> JsxElement {
@@ -72,11 +72,12 @@ def:pub HospitalQueue() -> JsxElement {
         }
     }
 
+    if not jacIsLoggedIn() { return <Navigate to="/account" replace={True} />; }
     return <main className="min-h-screen bg-muted/40 text-foreground">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
             <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card px-5 py-4 shadow-sm">
                 <div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold">S</div><div><p className="font-semibold tracking-tight">SuwaSmart <span className="text-primary">SL</span></p><p className="text-xs text-muted-foreground">Care without the waiting room</p></div></div>
-                <div className="flex flex-wrap items-center gap-2"><Link to="/staff" className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">Staff workspace</Link><span className="mr-1 text-xs font-medium text-muted-foreground">DEMO VIEW</span>
+                <div className="flex flex-wrap items-center gap-2"><Link to="/health-history" className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">Health history</Link><Link to="/staff" className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">Staff workspace</Link><span className="mr-1 text-xs font-medium text-muted-foreground">DEMO VIEW</span>
                     {for r in ["Patient", "Doctor", "Lab Staff", "Admin"] {<Button key={r} size="sm" variant={"default" if role == r else "outline"} onClick={lambda { role = r; }}>{r}</Button>}}
                     <Button variant="destructive" size="sm" onClick={lambda { notice = f"1990 Suwa Seriya dispatch simulated for {district}. For a real emergency, call 1990."; }}>Pre-Login 1990 SOS</Button>
                 </div>

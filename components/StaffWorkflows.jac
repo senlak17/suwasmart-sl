@@ -3,7 +3,7 @@ import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent
 import from .ui.button { Button }
 import from .ui.input { Input }
 import from .ui.badge { Badge }
-import from "@jac/runtime" { Link }
+import from "@jac/runtime" { Link, jacIsLoggedIn, Navigate }
 import "../styles/global.css";
 
 
@@ -74,6 +74,7 @@ def:pub StaffWorkflows() -> JsxElement {
         } except Exception { error = "Lab update could not be saved. Please try again."; }
     }
 
+    if not jacIsLoggedIn() { return <Navigate to="/account" replace={True} />; }
     return <main className="min-h-screen bg-muted/40 text-foreground">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
             <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card px-5 py-4 shadow-sm">
