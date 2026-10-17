@@ -81,7 +81,7 @@ def:pub get_suggested_hospitals(district: str) -> list[dict] {
 def:pub get_chat_messages() -> list[dict] {
     messages = [root -->][?:ChatMessage];
     if len(messages) == 0 {
-        root ++> ChatMessage(sender="SuwaSmart assistant", text="Hello. Tell me what symptoms you are experiencing. I can offer general next-step guidance, but I cannot diagnose. For an emergency, call 1990 now.", district="Colombo", created_at="Today", kind="assistant");
+        root ++> ChatMessage(sender="AYU", text="Hello. Tell me what symptoms you are experiencing. I can offer general next-step guidance, but I cannot diagnose. For an emergency, call 1990 now.", district="Colombo", created_at="Today", kind="assistant");
         messages = [root -->][?:ChatMessage];
     }
     rows: list[dict] = [];
@@ -125,7 +125,7 @@ def:pub triage_symptoms(symptoms: str, district: str) -> dict {
     if ai_guidance != "" and care_match != "Online GP, then orthopaedics if advised" and test == "A clinician can decide whether any tests are needed after reviewing your symptoms." { guidance = ai_guidance; }
     reply = f"Triage guide: {guidance} Suggested care: {care_match}. {test} Location noted: {district}. This is general guidance, not a diagnosis.";
     root ++> ChatMessage(sender="You", text=clean_symptoms, district=district, created_at="Now", kind="patient");
-    root ++> ChatMessage(sender="SuwaSmart assistant", text=reply, district=district, created_at="Now", kind="assistant");
+    root ++> ChatMessage(sender="AYU", text=reply, district=district, created_at="Now", kind="assistant");
     return {"ok": True, "message": guidance, "care_match": care_match, "suggested_test": test};
 }
 

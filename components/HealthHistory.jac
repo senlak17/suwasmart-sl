@@ -43,7 +43,7 @@ def:pub HealthHistory() -> JsxElement {
 
     if not jacIsLoggedIn() { return <Navigate to="/account" replace={True} />; }
     return <main className="min-h-svh bg-muted/40 text-foreground"><div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-5 shadow-sm"><div><p className="font-semibold">SuwaSmart <span className="text-primary">SL</span></p><p className="text-xs text-muted-foreground">Patient health record</p></div><Link to="/" className="rounded-md border px-3 py-2 text-sm hover:bg-muted">Patient dashboard</Link></header>
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-5 shadow-sm"><div><p className="font-semibold">SUVAVI <span className="text-primary">SL</span></p><p className="text-xs text-muted-foreground">Patient health record</p></div><Link to="/" className="rounded-md border px-3 py-2 text-sm hover:bg-muted">Patient dashboard</Link></header>
         <div><h1 className="text-2xl font-semibold tracking-tight">Health history tracker</h1><p className="text-sm text-muted-foreground">A dated view of allergies, conditions, diagnoses, and report summaries.</p></div>
         <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
             <Card className="shadow-sm"><CardHeader><CardTitle>Add health history</CardTitle><CardDescription>Keep a personal timeline for future consultations.</CardDescription></CardHeader><CardContent className="flex flex-col gap-4">

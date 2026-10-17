@@ -78,7 +78,7 @@ def:pub StaffWorkflows() -> JsxElement {
     return <main className="min-h-screen bg-muted/40 text-foreground">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
             <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card px-5 py-4 shadow-sm">
-                <div><p className="font-semibold tracking-tight">SuwaSmart <span className="text-primary">SL</span></p><p className="text-xs text-muted-foreground">Clinical operations workspace</p></div>
+                <div><p className="font-semibold tracking-tight">SUVAVI <span className="text-primary">SL</span></p><p className="text-xs text-muted-foreground">Clinical operations workspace</p></div>
                 <div className="flex flex-wrap gap-2"><Link to="/" className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">Patient dashboard</Link><Button size="sm" variant={"default" if role == "Doctor" else "outline"} onClick={lambda { set_role("Doctor"); }}>Doctor</Button><Button size="sm" variant={"default" if role == "Lab Staff" else "outline"} onClick={lambda { set_role("Lab Staff"); }}>Lab Staff</Button></div>
             </header>
             <div className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-2xl font-semibold tracking-tight">{role} workspace</h1><p className="text-sm text-muted-foreground">Manage today's clinic queue and diagnostic workflow.</p></div><Badge variant="secondary">Demo staff account</Badge></div>
@@ -102,7 +102,7 @@ def:pub StaffWorkflows() -> JsxElement {
                 {len(lab_tests) == 0 and <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">No tests are scheduled.</CardContent></Card>}
                 {for (i, test_row) in enumerate(lab_tests) {<StaffLabCard key={str(i)} test_row={test_row} onSave={save_report} />}}
             </section>}
-            <footer className="border-t pt-4 text-xs text-muted-foreground">Updates are simulated for demonstration and saved to the SuwaSmart graph.</footer>
+            <footer className="border-t pt-4 text-xs text-muted-foreground">Updates are simulated for demonstration and saved to the SUVAVI graph.</footer>
         </div>
     </main>;
 }

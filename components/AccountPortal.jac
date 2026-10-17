@@ -87,12 +87,12 @@ def:pub AccountPortal() -> JsxElement {
     return <main className="min-h-svh bg-muted/40 text-foreground">
         <div className="mx-auto grid min-h-svh w-full max-w-6xl gap-6 px-4 py-6 md:grid-cols-[1fr_1fr] md:items-center sm:px-6">
             <section className="flex min-h-64 flex-col justify-between gap-8 rounded-2xl bg-primary p-7 text-primary-foreground shadow-sm sm:p-10">
-                <div><p className="font-semibold tracking-tight">SuwaSmart SL</p><p className="mt-2 text-sm text-primary-foreground/80">Patient and clinical staff access</p></div>
+                <div><p className="font-semibold tracking-tight">SUVAVI SL</p><p className="mt-2 text-sm text-primary-foreground/80">Patient and clinical staff access</p></div>
                 <div className="flex flex-col gap-4"><h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Care records and clinic access, in one place.</h1><p className="max-w-lg text-sm leading-relaxed text-primary-foreground/80">Patients can keep their health history together. Clinical staff apply with their professional registration number.</p></div>
                 <div className="rounded-xl bg-primary-foreground/10 p-4 text-sm"><strong>Emergency?</strong> Call 1990 for Suwa Seriya ambulance assistance.</div>
             </section>
             <Card className="shadow-sm">
-                <CardHeader><CardTitle>Account portal</CardTitle><CardDescription>Register or sign in to continue to SuwaSmart SL.</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Account portal</CardTitle><CardDescription>Register or sign in to continue to SUVAVI SL.</CardDescription></CardHeader>
                 <CardContent className="flex flex-col gap-4">
                     <div className="flex flex-wrap gap-2"><Button variant={"default" if mode == "Sign in" else "outline"} onClick={lambda { mode = "Sign in"; }}>Sign in</Button><Button variant={"default" if mode == "Patient registration" else "outline"} onClick={lambda { mode = "Patient registration"; role = "patient"; }}>Patient registration</Button><Button variant={"default" if mode == "Staff application" else "outline"} onClick={lambda { mode = "Staff application"; }}>Staff application</Button></div>
                     {mode == "Staff application" and <>
