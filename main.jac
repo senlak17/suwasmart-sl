@@ -1,6 +1,6 @@
 import from services.queueService { get_staff_appointments, update_doctor_queue, get_lab_tests, update_lab_test }
 import from services.queueService { triage_symptoms, get_chat_messages }
-import from services.accountService { submit_staff_application }
+import from services.accountService { submit_staff_application, upload_patient_report }
 import ".styles.global.css";
 import from "@jac/runtime" { Router, Routes, Route }
 import from .components.AccountPortal { AccountPortal }

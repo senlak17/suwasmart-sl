@@ -1,4 +1,4 @@
-sv import from ..services.accountService { get_health_history, add_health_history_entry }
+sv import from ..services.accountService { get_health_history, add_health_history_entry, upload_patient_report }
 import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent }
 import from .ui.button { Button }
 import from .ui.input { Input }
@@ -15,6 +15,8 @@ def:pub HealthHistory() -> JsxElement {
     has loading: bool = True;
     has error: str = "";
     has message: str = "";
+    has upload_message: str = "";
+    has upload_error: str = "";
 
     async can with entry {
         if jacIsLoggedIn() {
@@ -27,6 +29,28 @@ def:pub HealthHistory() -> JsxElement {
     def change_title(e: ChangeEvent) { title = e.target.value; }
     def change_detail(e: ChangeEvent) { detail = e.target.value; }
     def change_date(e: ChangeEvent) { recorded_at = e.target.value; }
+    async def save_pdf(e: ChangeEvent) {
+        upload_error = "";
+        upload_message = "";
+        selected = e.target.files[0];
+        if not selected { return; }
+        if not selected.name.lower().endswith(".pdf") or selected.type != "application/pdf" {
+            upload_error = "Choose a PDF file only.";
+            return;
+        }
+        try {
+            form_data = new(FormData) as any;
+            form_data.append("file", selected);
+            token = localStorage.getItem("jac_token") or "";
+            response = await fetch("/walker/upload_patient_report", {"method": "POST", "headers": {"Authorization": "Bearer " + token}, "body": form_data});
+            response_body = await response.json();
+            upload_result = response_body["data"]["reports"][0] as dict;
+            if upload_result["ok"] as bool {
+                upload_message = upload_result["message"] as str;
+                entries = await get_health_history();
+            } else { upload_error = upload_result["message"] as str; }
+        } except Exception { upload_error = "PDF upload failed. Ensure you are signed in and retry."; }
+    }
     async def save_entry() {
         error = "";
         message = "";
@@ -52,6 +76,7 @@ def:pub HealthHistory() -> JsxElement {
                 <label className="flex flex-col gap-1.5 text-sm font-medium">Date<Input type="date" value={recorded_at} onChange={change_date} /></label>
                 <label className="flex flex-col gap-1.5 text-sm font-medium">Details<Input value={detail} onChange={change_detail} placeholder="Clinician, findings, or report summary" /></label>
                 <Button onClick={save_entry}>Save health entry</Button>
+                <div className="flex flex-col gap-2 rounded-xl border border-dashed p-4"><p className="font-medium">Attach a medical report</p><p className="text-xs text-muted-foreground">PDF only. Uploaded files are stored under your patient account.</p><input type="file" accept="application/pdf,.pdf" onChange={save_pdf} className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-primary-foreground" />{upload_message != "" and <p className="text-sm text-primary">{upload_message}</p>}{upload_error != "" and <p className="text-sm text-destructive">{upload_error}</p>}</div>
                 {message != "" and <p className="text-sm text-primary">{message}</p>}
                 {error != "" and <p className="text-sm text-destructive">{error}</p>}
             </CardContent></Card>

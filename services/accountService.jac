@@ -1,3 +1,7 @@
+import from http { UploadFile }
+
+glob report_storage: any = store();
+
 node PatientProfile {
     has username: str = "";
     has nic: str = "";
@@ -32,16 +36,9 @@ def:priv save_patient_profile(username: str, nic: str, full_name: str, age: int,
     if age < 0 or age > 120 { return {"ok": False, "message": "Enter a valid age."}; }
     for profile in [root -->][?:PatientProfile] {
         if profile.role == "patient" {
-            profile.username = username.strip();
-            profile.nic = nic.strip();
-            profile.full_name = full_name.strip();
-            profile.age = age;
-            profile.address = address.strip();
-            profile.district = district.strip();
-            profile.allergies = allergies.strip();
-            profile.diseases = diseases.strip();
-            profile.diagnosis_history = diagnosis_history.strip();
-            profile.medical_reports = medical_reports.strip();
+            profile.username = username.strip(); profile.nic = nic.strip(); profile.full_name = full_name.strip(); profile.age = age;
+            profile.address = address.strip(); profile.district = district.strip(); profile.allergies = allergies.strip(); profile.diseases = diseases.strip();
+            profile.diagnosis_history = diagnosis_history.strip(); profile.medical_reports = medical_reports.strip();
             return {"ok": True, "message": "Patient profile saved."};
         }
     }
@@ -76,10 +73,35 @@ def:priv get_health_history() -> list[dict] {
     if p.diseases.strip() { entries.append({"category": "Disease", "title": "Medical conditions", "detail": p.diseases, "recorded_at": "Registration profile"}); }
     if p.diagnosis_history.strip() { entries.append({"category": "Diagnosis", "title": "Diagnosis history", "detail": p.diagnosis_history, "recorded_at": "Registration profile"}); }
     if p.medical_reports.strip() { entries.append({"category": "Report", "title": "Medical reports summary", "detail": p.medical_reports, "recorded_at": "Registration profile"}); }
-    for item in [root -->][?:HealthHistoryEntry] {
-        entries.append({"category": item.category, "title": item.title, "detail": item.detail, "recorded_at": item.recorded_at});
-    }
+    for item in [root -->][?:HealthHistoryEntry] { entries.append({"category": item.category, "title": item.title, "detail": item.detail, "recorded_at": item.recorded_at}); }
     return entries;
+}
+
+
+walker:protect upload_patient_report {
+    has file: UploadFile;
+
+    can save with Root entry {
+        profiles = [root -->][?:PatientProfile];
+        if len(profiles) == 0 or profiles[0].role != "patient" {
+            report {"ok": False, "message": "A patient profile is required."};
+            disengage;
+        }
+        filename = self.file.filename or "";
+        if not filename.lower().endswith(".pdf") or self.file.content_type != "application/pdf" {
+            report {"ok": False, "message": "Upload a PDF file only."};
+            disengage;
+        }
+        safe_name = filename.replace("/", "_").replace("\\", "_");
+        destination = f"patient-reports/{jid(root)}/{safe_name}";
+        try {
+            report_storage.upload(self.file.file, destination);
+            root ++> HealthHistoryEntry(category="Medical report", title=safe_name, detail=f"PDF stored securely: {destination}", recorded_at="Uploaded now");
+            report {"ok": True, "message": f"PDF report {safe_name} added to health history."};
+        } except Exception {
+            report {"ok": False, "message": "The PDF could not be stored. Please try again."};
+        }
+    }
 }
 
 
