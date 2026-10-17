@@ -16,6 +16,14 @@ node Appointment {
     has status: str = "Booked";
 }
 
+node ChatMessage {
+    has sender: str = "";
+    has text: str = "";
+    has district: str = "";
+    has created_at: str = "";
+    has kind: str = "message";
+}
+
 
 def:pub get_queue() -> list[dict] {
     hospitals = [root -->][?:Hospital];
@@ -48,6 +56,51 @@ def:pub get_suggested_hospitals(district: str) -> list[dict] {
     }
     if len(local) > 0 { return local + other; }
     return other;
+}
+
+
+def:pub get_chat_messages() -> list[dict] {
+    messages = [root -->][?:ChatMessage];
+    if len(messages) == 0 {
+        root ++> ChatMessage(sender="SuwaSmart assistant", text="Hello. Tell me what symptoms you are experiencing. I can offer general next-step guidance, but I cannot diagnose. For an emergency, call 1990 now.", district="Colombo", created_at="Today", kind="assistant");
+        messages = [root -->][?:ChatMessage];
+    }
+    rows: list[dict] = [];
+    for m in messages {
+        rows.append({"sender": m.sender, "text": m.text, "district": m.district, "created_at": m.created_at, "kind": m.kind});
+    }
+    return rows;
+}
+
+
+def:pub triage_symptoms(symptoms: str, district: str) -> dict {
+    if not symptoms.strip() {
+        return {"ok": False, "message": "Please describe your symptoms first."};
+    }
+    clean_symptoms = symptoms.strip();
+    lower_symptoms = clean_symptoms.lower();
+    guidance = "A prompt online GP consultation is a reasonable next step. Share when the symptoms began and any medicines or allergies with the clinician.";
+    care_match = "Online GP";
+    test = "A clinician can decide whether any tests are needed after reviewing your symptoms.";
+    if "chest pain" in lower_symptoms or "shortness of breath" in lower_symptoms or "difficulty breathing" in lower_symptoms {
+        guidance = "These symptoms can be urgent. Call 1990 or go to the nearest emergency department now. Do not wait for a chat response.";
+        care_match = "Emergency care now";
+    } elif "joint" in lower_symptoms or "back pain" in lower_symptoms {
+        guidance = "A physical assessment may help. Start with an online GP, who can refer you to an orthopaedic specialist if needed.";
+        care_match = "Online GP, then orthopaedics if advised";
+    } elif "fever" in lower_symptoms or "dengue" in lower_symptoms {
+        guidance = "Please contact a clinician promptly, especially for persistent or high fever. A clinician may consider a Full Blood Count or Dengue NS1 based on your history.";
+        care_match = "Online GP";
+        test = "Possible clinician-directed test: Full Blood Count or Dengue NS1.";
+    } elif "headache" in lower_symptoms or "dizz" in lower_symptoms {
+        guidance = "A clinician should review new, persistent, or worsening symptoms. An online GP can assess you and advise whether a specialist review is needed.";
+        care_match = "Online GP";
+    } else {
+        guidance = "A clinician should assess your symptoms and history before recommending treatment. An online GP is a practical first step.";
+    }
+    root ++> ChatMessage(sender="You", text=clean_symptoms, district=district, created_at="Now", kind="patient");
+    root ++> ChatMessage(sender="SuwaSmart assistant", text=f"Triage guide: {guidance} Suggested care: {care_match}. {test} Location noted: {district}. This is general guidance, not a diagnosis.", district=district, created_at="Now", kind="assistant");
+    return {"ok": True, "message": f"Triage guide: {guidance} Suggested care: {care_match}. {test} Location noted: {district}. This is general guidance, not a diagnosis.", "care_match": care_match, "suggested_test": test};
 }
 
 
