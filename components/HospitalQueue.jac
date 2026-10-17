@@ -1,4 +1,4 @@
-sv import from ..services.queueService { get_queue, create_booking }
+sv import from ..services.queueService { get_queue, create_booking, get_suggested_hospitals }
 import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent }
 import from .ui.button { Button }
 import from .ui.input { Input }
@@ -8,6 +8,7 @@ import from .ui.badge { Badge }
 def:pub HospitalQueue() -> JsxElement {
     has role: str = "Patient";
     has rows: list[dict] = [];
+    has suggested_rows: list[dict] = [];
     has patient_name: str = "";
     has district: str = "Colombo";
     has visit_type: str = "Online GP";
@@ -18,6 +19,7 @@ def:pub HospitalQueue() -> JsxElement {
     async can with entry {
         try {
             rows = await get_queue();
+            suggested_rows = await get_suggested_hospitals(district);
             loading = False;
         } except Exception {
             error = "Queue data could not be loaded. Refresh to try again.";
@@ -26,7 +28,15 @@ def:pub HospitalQueue() -> JsxElement {
     }
 
     def update_patient(e: ChangeEvent) { patient_name = e.target.value; }
-    def update_district(e: ChangeEvent) { district = e.target.value; }
+    async def update_district(e: ChangeEvent) {
+        district = e.target.value;
+        try {
+            suggested_rows = await get_suggested_hospitals(district);
+            error = "";
+        } except Exception {
+            error = "Nearby hospital suggestions could not be refreshed.";
+        }
+    }
     def update_type(e: ChangeEvent) { visit_type = e.target.value; }
     async def book_visit() {
         notice = "";
@@ -38,6 +48,7 @@ def:pub HospitalQueue() -> JsxElement {
                 notice = result["message"] as str;
                 patient_name = "";
                 rows = await get_queue();
+                suggested_rows = await get_suggested_hospitals(district);
             } else { error = result["message"] as str; }
         } except Exception {
             error = "Booking could not be saved. Please try again.";
@@ -73,11 +84,11 @@ def:pub HospitalQueue() -> JsxElement {
                 </Card>
             </section>
             <section className="flex flex-col gap-4">
-                <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-2xl font-semibold tracking-tight">Today's care queues</h2><p className="text-sm text-muted-foreground">Know the clinic status before you leave home.</p></div><span className="text-sm text-muted-foreground">Signed in as <strong className="text-foreground">{role}</strong></span></div>
-                {loading and <Card><CardContent className="py-10 text-sm text-muted-foreground">Loading live queue…</CardContent></Card>}
-                {not loading and len(rows) == 0 and <Card><CardContent className="py-10 text-center"><p className="font-medium">No queue updates yet</p><p className="mt-1 text-sm text-muted-foreground">Clinic availability will appear here.</p></CardContent></Card>}
-                {not loading and len(rows) > 0 and <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{for row in rows {
-                    <Card key={row["name"] as str} className="shadow-sm transition-shadow hover:shadow-md"><CardHeader className="pb-3"><div className="flex items-start justify-between gap-3"><div><CardTitle className="text-base">{row["name"] as str}</CardTitle><CardDescription>{row["district"] as str} · {row["specialty"] as str}</CardDescription></div><Badge variant={"secondary" if (row["status"] as str) == "On time" else "outline"}>{row["status"] as str}</Badge></div></CardHeader><CardContent className="flex items-end justify-between border-t pt-4"><div><p className="text-xs text-muted-foreground">Current token</p><p className="text-2xl font-semibold tabular-nums">#{row["token"] as int}</p></div><div className="text-right"><p className="text-xs text-muted-foreground">Estimated delay</p><p className="font-medium tabular-nums">{str(row["delay"] as int)} min</p></div></CardContent></Card>
+                <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-2xl font-semibold tracking-tight">Hospitals near {district}</h2><p className="text-sm text-muted-foreground">Local matches appear first, followed by other available hospitals.</p></div><span className="text-sm text-muted-foreground">Signed in as <strong className="text-foreground">{role}</strong></span></div>
+                {loading and <Card><CardContent className="py-10 text-sm text-muted-foreground">Loading nearby hospitals…</CardContent></Card>}
+                {not loading and len(suggested_rows) == 0 and <Card><CardContent className="py-10 text-center"><p className="font-medium">No hospital suggestions available</p><p className="mt-1 text-sm text-muted-foreground">Try another district or check again later.</p></CardContent></Card>}
+                {not loading and len(suggested_rows) > 0 and <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{for row in suggested_rows {
+                    <Card key={row["name"] as str} className="shadow-sm transition-shadow hover:shadow-md"><CardHeader className="pb-3"><div className="flex items-start justify-between gap-3"><div><CardTitle className="text-base">{row["name"] as str}</CardTitle><CardDescription>{row["district"] as str} · {row["specialty"] as str}</CardDescription><Badge className="mt-2" variant={"default" if (row["district"] as str).lower() == district.lower() else "outline"}>{"Nearby match" if (row["district"] as str).lower() == district.lower() else "Other district"}</Badge></div><Badge variant={"secondary" if (row["status"] as str) == "On time" else "outline"}>{row["status"] as str}</Badge></div></CardHeader><CardContent className="flex items-end justify-between border-t pt-4"><div><p className="text-xs text-muted-foreground">Current token</p><p className="text-2xl font-semibold tabular-nums">#{row["token"] as int}</p></div><div className="text-right"><p className="text-xs text-muted-foreground">Estimated delay</p><p className="font-medium tabular-nums">{str(row["delay"] as int)} min</p></div></CardContent></Card>
                 }}</div>}
             </section>
             <footer className="flex flex-wrap items-center justify-between gap-2 border-t pt-4 text-xs text-muted-foreground"><span>SuwaSmart SL · Queue visibility for better care planning</span><span>Emergency: call 1990 for ambulance assistance</span></footer>

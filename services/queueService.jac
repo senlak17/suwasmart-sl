@@ -35,6 +35,22 @@ def:pub get_queue() -> list[dict] {
 }
 
 
+def:pub get_suggested_hospitals(district: str) -> list[dict] {
+    all_hospitals = get_queue();
+    local: list[dict] = [];
+    other: list[dict] = [];
+    for h in all_hospitals {
+        if (h["district"] as str).lower() == district.strip().lower() {
+            local.append(h);
+        } else {
+            other.append(h);
+        }
+    }
+    if len(local) > 0 { return local + other; }
+    return other;
+}
+
+
 def:pub create_booking(patient_name: str, district: str, visit_type: str) -> dict {
     if not patient_name.strip() { return {"ok": False, "message": "Enter the patient's name."}; }
     if not district.strip() { return {"ok": False, "message": "Choose a district."}; }
