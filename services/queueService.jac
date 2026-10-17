@@ -90,6 +90,12 @@ def:pub get_chat_messages() -> list[dict] {
 }
 
 
+def _llm_symptom_guidance(symptoms: str, district: str) -> str by llm(temperature=0.2, max_tokens=180);
+sem _llm_symptom_guidance = "Give brief, cautious, non-diagnostic next-step guidance for the user's symptoms. Do not prescribe medication, assert a diagnosis, or contradict emergency advice. Encourage a licensed clinician to assess the patient.";
+sem _llm_symptom_guidance.symptoms = "The patient's own description of symptoms.";
+sem _llm_symptom_guidance.district = "The patient's Sri Lankan district, for general care context only.";
+
+
 def:pub triage_symptoms(symptoms: str, district: str) -> dict {
     if not symptoms.strip() { return {"ok": False, "message": "Please describe your symptoms first."}; }
     clean_symptoms = symptoms.strip();
@@ -111,8 +117,15 @@ def:pub triage_symptoms(symptoms: str, district: str) -> dict {
     } else {
         guidance = "A clinician should assess your symptoms and history before recommending treatment. An online GP is a practical first step.";
     }
+    ai_guidance = "";
+    if care_match != "Emergency care now" {
+        try { ai_guidance = _llm_symptom_guidance(clean_symptoms, district).strip(); }
+        except Exception { ai_guidance = ""; }
+    }
+    if ai_guidance != "" and care_match != "Online GP, then orthopaedics if advised" and test == "A clinician can decide whether any tests are needed after reviewing your symptoms." { guidance = ai_guidance; }
+    reply = f"Triage guide: {guidance} Suggested care: {care_match}. {test} Location noted: {district}. This is general guidance, not a diagnosis.";
     root ++> ChatMessage(sender="You", text=clean_symptoms, district=district, created_at="Now", kind="patient");
-    root ++> ChatMessage(sender="SuwaSmart assistant", text=f"Triage guide: {guidance} Suggested care: {care_match}. {test} Location noted: {district}. This is general guidance, not a diagnosis.", district=district, created_at="Now", kind="assistant");
+    root ++> ChatMessage(sender="SuwaSmart assistant", text=reply, district=district, created_at="Now", kind="assistant");
     return {"ok": True, "message": guidance, "care_match": care_match, "suggested_test": test};
 }
 
